@@ -27,7 +27,6 @@ class FilesController {
             }
         }
 
-        // Prepare the new file document
         const newFile = {
             userId,
             name,
@@ -54,9 +53,7 @@ class FilesController {
         try {
             // Insert the new file document into the database
             const result = await dbClient.db.collection('files').insertOne(newFile);
-            const { _id } = result.ops[0]; // Extract the auto-generated id
-
-            // Return the new file with only relevant attributes
+            const { _id } = result.ops[0];
             return res.status(201).json({
                 id: _id,
                 userId,
@@ -70,6 +67,73 @@ class FilesController {
             return res.status(500).json({ error: 'Internal Server Error' });
         }
     }
+	 static async getShow(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id; 
+        const file = await dbClient.db.collection('files').findOne({ _id: id, userId });
+        if (!file) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        return res.json(file);
+    }
+
+	 static async putPublish(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const file = await dbClient.db.collection('files').findOne({ _id: id, userId });
+        if (!file) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        await dbClient.db.collection('files').updateOne({ _id: id }, { $set: { isPublic: true } });
+        return res.status(200).json(file);
+    }
+	static async getIndex(req, res) {
+        const { parentId = '0', page = '0' } = req.query;
+        const userId = req.user.id;
+
+        // Pagination parameters
+        const pageSize = 20;
+        const skip = parseInt(page) * pageSize;
+        const files = await dbClient.db.collection('files')
+            .find({ parentId, userId })
+            .skip(skip)
+            .limit(pageSize)
+            .toArray()
+        return res.json(files);
+    }
+
+
+	static async putUnpublish(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const file = await dbClient.db.collection('files').findOne({ _id: id, userId });
+        if (!file) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+
+        await dbClient.db.collection('files').updateOne({ _id: id }, { $set: { isPublic: false } });
+
+        return res.status(200).json(file);
+    }
+
+	static async putUnpublish(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const file = await dbClient.db.collection('files').findOne({ _id: id, userId });
+        if (!file) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+
+        // Update isPublic to false
+        await dbClient.db.collection('files').updateOne({ _id: id }, { $set: { isPublic: false } });
+
+        // Return updated file document
+        return res.status(200).json(file);
+    }
 }
+
+
 
 export default FilesController;
