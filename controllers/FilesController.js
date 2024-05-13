@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+import mime from 'mime-types';
 
 class FilesController {
     static async postUpload(req, res) {
@@ -51,7 +52,6 @@ class FilesController {
         }
 
         try {
-            // Insert the new file document into the database
             const result = await dbClient.db.collection('files').insertOne(newFile);
             const { _id } = result.ops[0];
             return res.status(201).json({
@@ -132,8 +132,31 @@ class FilesController {
         // Return updated file document
         return res.status(200).json(file);
     }
+	static async getFile(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const file = await dbClient.db.collection('files').findOne({ _id: id });
+        if (!file || (!file.isPublic && (!req.user || file.userId !== userId))) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+
+        // Check if the file type is a folder
+        if (file.type === 'folder') {
+            return res.status(400).json({ error: 'A folder doesn\'t have content' });
+        }
+
+        if (!file.localPath) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const mimeType = mime.contentType(file.name);
+        try {
+            const fileContent = fs.readFileSync(file.localPath, 'utf-8');
+            return res.set('Content-Type', mimeType).send(fileContent);
+        } catch (error) {
+            console.error('Error reading file:', error);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
 }
-
-
 
 export default FilesController;
