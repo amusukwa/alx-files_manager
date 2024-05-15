@@ -132,30 +132,33 @@ class FilesController {
         // Return updated file document
         return res.status(200).json(file);
     }
-	static async getFile(req, res) {
+	 static async getFile(req, res) {
         const { id } = req.params;
-        const userId = req.user.id;
+        const { size } = req.query;
+
+        // Find the file document based on the ID
         const file = await dbClient.db.collection('files').findOne({ _id: id });
-        if (!file || (!file.isPublic && (!req.user || file.userId !== userId))) {
+
+        // If no file document is found, return 404 error
+        if (!file) {
             return res.status(404).json({ error: 'Not found' });
         }
-
-        // Check if the file type is a folder
+        if (!file.isPublic && (!req.user || req.user.id !== file.userId)) {
+            return res.status(404).json({ error: 'Not found' });
+        }
         if (file.type === 'folder') {
             return res.status(400).json({ error: 'A folder doesn\'t have content' });
         }
 
-        if (!file.localPath) {
+        const filePath = `${file.localPath}_${size}`;
+        try {
+            await fs.promises.access(filePath, fs.constants.F_OK);
+        } catch (error) {
             return res.status(404).json({ error: 'Not found' });
         }
-        const mimeType = mime.contentType(file.name);
-        try {
-            const fileContent = fs.readFileSync(file.localPath, 'utf-8');
-            return res.set('Content-Type', mimeType).send(fileContent);
-        } catch (error) {
-            console.error('Error reading file:', error);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
+        const mimeType = mime.lookup(file.name);
+        res.setHeader('Content-Type', mimeType);
+        fs.createReadStream(filePath).pipe(res);
     }
 }
 

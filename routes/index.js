@@ -7,6 +7,8 @@ import AuthController from '../controllers/AuthController';
 import FilesController from '../controllers/FilesController';
 
 const router = express.Router();
+const fileQueue = new Bull('fileQueue');
+
 
 router.get('/status', AppController.getStatus);
 router.get('/stats', AppController.getStats);
