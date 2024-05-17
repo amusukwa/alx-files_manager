@@ -37,7 +37,7 @@ export default class FilesController {
     }
 
     const { name, type } = req.body;
-    const parentId = req.body.parentId || '0';
+    const parentId = req.body.parentId || 0;
     const isPublic = req.body.isPublic || false;
     const { data } = req.body;
     const fileTypes = ['folder', 'file', 'image'];
@@ -57,8 +57,8 @@ export default class FilesController {
     const filesCollection = dbClient.db.collection('files');
     let parentFolder = null;
 
-    let parentObjectId = '0';
-    if (parentId !== '0') {
+    let parentObjectId = 0;
+    if (parentId !== 0) {
       try {
         parentObjectId = ObjectId(parentId);
       } catch (err) {
@@ -68,7 +68,7 @@ export default class FilesController {
 
     parentFolder = await filesCollection.findOne({ _id: parentObjectId });
 
-    if (parentId !== '0' && !parentFolder) {
+    if (parentId !== 0 && !parentFolder) {
       return res.status(400).json({ error: 'Parent not found' });
     }
 
@@ -162,14 +162,14 @@ export default class FilesController {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const parentId = req.query.parentId || '0';
+    const parentId = req.query.parentId || 0;
     const page = req.query.page || 0;
 
     const filesCollection = dbClient.db.collection('files');
 
     let cursor;
 
-    if (parentId === '0') {
+    if (parentId === 0) {
       cursor = filesCollection.find().skip(page * 20).limit(20);
     } else {
       try {

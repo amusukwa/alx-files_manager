@@ -18,7 +18,11 @@ export default class AuthController {
     const password = authDataArray[1];
 
     const hash = createHash('sha1');
-    hash.update(password);
+    try {
+      hash.update(password);
+    } catch (error) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const hashedPassword = hash.digest('hex');
 
     const usersCollection = dbClient.db.collection('users');
